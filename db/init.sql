@@ -166,3 +166,11 @@ FROM (
     GROUP BY order_id
 ) agg
 WHERE agg.order_id = o.id;
+
+-- ==========================================
+-- 6. READ-ONLY ROLE FOR THE AGENT (least privilege)
+-- ==========================================
+CREATE ROLE agent_ro LOGIN PASSWORD 'agent_ro_dev_only';
+GRANT USAGE ON SCHEMA public TO agent_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO agent_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO agent_ro;

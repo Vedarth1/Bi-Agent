@@ -1,4 +1,4 @@
-from app.db import list_tables, get_schema
+from app.db import list_tables, get_schema,run_query
 
 TOOLS = [
     {
@@ -23,6 +23,20 @@ TOOLS = [
             }
         }
     }
+    ,{
+        "type": "function",
+        "function": {
+            "name": "run_query",
+            "description": "Run a read-only SQL SELECT query against the database and return up to 20 rows. Use get_schema first to learn column names.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "sql": {"type": "string", "description": "A single SELECT statement"}
+                },
+                "required": ["sql"]
+            }
+        }
+    }
 ]
 
 def execute_tool(name: str, arguments: dict) -> str:
@@ -36,5 +50,11 @@ def execute_tool(name: str, arguments: dict) -> str:
         if not table_name:
             return "ERROR: table_name argument is required"
         return get_schema(table_name=table_name)
+
+    if name == "run_query":
+        sql = arguments.get("sql")
+        if not sql:
+            return "ERROR: sql argument is required"
+        return run_query(sql)
 
     return f"ERROR: unknown tool '{name}'"
