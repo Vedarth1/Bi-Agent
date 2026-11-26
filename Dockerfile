@@ -8,4 +8,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "step1_hello_llm.py"]
+EXPOSE 8000
+
+CMD ["python", "main.py"]
