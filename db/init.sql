@@ -111,6 +111,7 @@ CREATE INDEX idx_products_category
 -- ==========================================
 -- 5. SEED DATA
 -- ==========================================
+SELECT setseed(0.42);
 
 INSERT INTO customers (name, country) VALUES
     ('Aarav Sharma', 'India'),
@@ -149,13 +150,13 @@ INSERT INTO order_items (order_id, product_id, quantity, unit_price)
 SELECT
     o.id,
     p.id,
-    p.price,
-    1 + FLOOR(random() * 3)::int
+    1 + FLOOR(random() * 3)::int,
+    p.price                     
 FROM orders o
-CROSS JOIN LATERAL (
-    SELECT id, price FROM products ORDER BY random() LIMIT 1
-) p
-CROSS JOIN LATERAL generate_series(1, 1 + FLOOR(random() * 3)::int) AS n;
+JOIN LATERAL (
+    SELECT id, price FROM products WHERE o.id IS NOT NULL ORDER BY random() LIMIT 1
+) p ON true
+CROSS JOIN LATERAL generate_series(1, 1 + (o.id % 3)) AS g;
 
 -- roll item sums back up into orders.total_amount
 UPDATE orders o
