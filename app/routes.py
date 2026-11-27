@@ -2,7 +2,7 @@ import json
 from fastapi import APIRouter
 from pydantic import ValidationError
 from app.schemas import ChatRequest, AnalyzeRequest, ChartSpec
-from app.llm_service import run_agent, build_chart_spec
+from app.llm_service import run_agent, build_chart_spec, scrub_output
 from app.db import execute_query
 from app.memory import store
 
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.post("/chat")
 def chat(req: ChatRequest):
     result = run_agent(req.prompt)
-    return {"response": result["answer"]}
+    return {"response": scrub_output(result["answer"])}
 
 
 @router.post("/analyze")
@@ -23,6 +23,7 @@ def analyze(req: AnalyzeRequest):
     history = store.history(cid)
 
     result = run_agent(req.question, history=history)
+    result["answer"] = scrub_output(result["answer"])
     columns, rows, chart, chart_error = [], [], None, None
 
     if result["sql_used"]:
@@ -33,13 +34,19 @@ def analyze(req: AnalyzeRequest):
 
     if columns:
         try:
-            chart = ChartSpec.model_validate(
+            spec = ChartSpec.model_validate(
                 build_chart_spec(req.question, columns, rows)
-            ).model_dump()
+            )
+            if spec.x_key not in columns or spec.y_key not in columns:
+                chart_error = (
+                    f"chart keys '{spec.x_key}'/'{spec.y_key}' are not in the result "
+                    f"columns {columns}"
+                )
+            else:
+                chart = spec.model_dump()
         except (ValidationError, json.JSONDecodeError) as e:
             chart_error = f"chart spec invalid: {e}"
 
-    # only successful turns enter memory; errors are transient, not knowledge
     if result["answer"].startswith("ERROR"):
         history_turns = len(history) // 2
     else:
