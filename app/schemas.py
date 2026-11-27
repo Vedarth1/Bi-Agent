@@ -8,6 +8,7 @@ class ChatRequest(BaseModel):
 
 class AnalyzeRequest(BaseModel):
     question: str
+    conversation_id: str | None = None
 
 
 class ChartSpec(BaseModel):

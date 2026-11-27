@@ -78,9 +78,11 @@ def _normalize_tool_call(obj: dict) -> tuple[str, dict] | None:
     return name, args if isinstance(args, dict) else {}
 
 
-def run_agent(prompt: str, max_iterations: int = MAX_ITERATIONS) -> dict:
+def run_agent(prompt: str, max_iterations: int = MAX_ITERATIONS,
+              history: list[dict] | None = None) -> dict:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
+        *(history or []),                      # memory: prior (question, answer) pairs
         {"role": "user", "content": prompt},
     ]
     sql_used = None
