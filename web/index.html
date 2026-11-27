@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BI Agent</title>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>
+    :root {
+      --bg: #f5f6fa; --card: #ffffff; --border: #e3e6ee; --text: #111827; --muted: #6b7280;
+      --accent: #4f46e5; --accent-soft: #eef0ff; --accent-deep: #e0e3ff; --user: #eef0ff;
+      --danger: #b91c1c; --danger-bg: #fef2f2; --warn: #92400e; --warn-bg: #fffbeb;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+    button { font: inherit; cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .6; }
+    .hidden { display: none !important; }
+
+    header { position: sticky; top: 0; z-index: 10; background: rgba(245, 246, 250, .92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+    .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+    h1 { margin: 0; font-size: 17px; line-height: 1.2; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+    .session { display: flex; align-items: center; gap: 8px; }
+    .badge { font-size: 12px; color: var(--muted); background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+    .ghost { font-size: 13px; font-weight: 600; color: var(--accent); background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; white-space: nowrap; }
+    .ghost:hover:not(:disabled) { border-color: var(--accent); }
+
+    .ask { display: flex; gap: 8px; }
+    .ask input { flex: 1; min-width: 0; font: inherit; padding: 11px 14px; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 10px; }
+    .ask input:focus { outline: 3px solid var(--accent-soft); border-color: var(--accent); }
+    .ask button { font-weight: 600; color: #fff; background: var(--accent); border: 0; border-radius: 10px; padding: 11px 22px; }
+    .ask button:hover:not(:disabled) { background: #4338ca; }
+    .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0 12px; }
+    .chips-label { color: var(--muted); font-size: 13px; }
+    .chip { font-size: 13px; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px; padding: 5px 12px; }
+    .chip:hover:not(:disabled) { background: var(--accent-deep); }
+
+    main { padding-bottom: 60px; }
+    .empty { text-align: center; color: var(--muted); padding: 90px 20px; }
+    .empty h2 { margin: 0 0 6px; font-size: 20px; color: var(--text); }
+
+    .turn { margin: 18px 0; background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 1px 2px rgba(17, 24, 39, .04); overflow: hidden; scroll-margin-top: 180px; }
+    .msg { padding: 16px 20px; }
+    .msg.user { background: var(--user); border-bottom: 1px solid var(--border); border-left: 4px solid var(--accent); font-weight: 600; }
+    .answer { white-space: pre-wrap; word-break: break-word; }
+    .status { color: var(--muted); }
+    .timer { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .spinner { display: inline-block; width: 14px; height: 14px; margin-right: 8px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; vertical-align: -2px; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error { color: var(--danger); background: var(--danger-bg); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; word-break: break-word; }
+    .warn { margin-top: 12px; color: var(--warn); background: var(--warn-bg); border-radius: 8px; padding: 8px 12px; font-size: 13px; word-break: break-word; }
+    /* vega-embed styles the container as inline-block, which collapses a 'container' width to 0 */
+    div.chart { display: block; width: 100%; margin-top: 16px; }
+
+    .trace { margin-top: 14px; background: #fafbff; border: 1px solid var(--border); border-radius: 10px; }
+    .trace summary { padding: 10px 14px; color: var(--muted); font-size: 13px; cursor: pointer; list-style: none; word-break: break-word; }
+    .trace summary::-webkit-details-marker { display: none; }
+    .trace summary::before { content: '\25B8  '; }
+    .trace[open] summary::before { content: '\25BE  '; }
+    .trace-body { padding: 2px 14px 14px; }
+    .trace h4 { margin: 12px 0 6px; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+    .trace pre { margin: 0; padding: 10px 12px; background: #f1f2f8; border-radius: 8px; font: 12.5px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
+    .table-scroll { max-height: 280px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font: 13px/1.4 var(--mono); background: #fff; }
+    th, td { padding: 7px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    th { position: sticky; top: 0; background: #f7f8fc; color: var(--muted); font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-transform: capitalize; }
+    th:not(:first-child), td:not(:first-child) { text-align: right; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <div class="brand">
+        <div class="logo">BI</div>
+        <div>
+          <h1>BI Agent</h1>
+          <p>Ask your database in plain English — it writes the SQL and charts the result</p>
+        </div>
+      </div>
+      <div class="session">
+        <span id="memory-badge" class="badge hidden"></span>
+        <button id="new-btn" class="ghost" type="button">+ New conversation</button>
+      </div>
+    </div>
+    <form id="ask-form" class="ask">
+      <input id="q" placeholder="e.g. Show me the monthly revenue trend for 2026" autocomplete="off" autofocus>
+      <button id="ask-btn" type="submit">Ask</button>
+    </form>
+    <div class="chips">
+      <span class="chips-label">Try:</span>
+      <button class="chip" type="button" data-q="What is the total revenue per product category, highest first?">Revenue by category, highest first</button>
+      <button class="chip" type="button" data-q="Show me the monthly revenue trend for 2026">Monthly revenue trend for 2026</button>
+      <button class="chip" type="button" data-q="What share of revenue does each category have?">Revenue share by category</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="empty" class="empty">
+    <h2>Ask a question to get started</h2>
+    <p>Each turn shows the answer, a chart, and the agent's trace: iterations, tool calls and the SQL it ran.</p>
+  </div>
+  <div id="thread"></div>
+</main>
+
+<script>
+  // ---- state: one conversation per page visit; the id is issued by the server ----
+  let conversationId = null;
+  let busy = false;
+  let chartSeq = 0;
+
+  const form = document.getElementById('ask-form');
+  const input = document.getElementById('q');
+  const askBtn = document.getElementById('ask-btn');
+  const thread = document.getElementById('thread');
+  const emptyState = document.getElementById('empty');
+  const memoryBadge = document.getElementById('memory-badge');
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    ask();
+  });
+
+  document.getElementById('new-btn').addEventListener('click', newConversation);
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      if (busy) return;
+      input.value = chip.dataset.q;
+      ask();
+    });
+  });
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    // textContent only, never innerHTML: answers and SQL are model-generated
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function setBusy(value) {
+    busy = value;
+    input.disabled = value;
+    askBtn.disabled = value;
+    input.focus();
+  }
+
+  function updateMemoryBadge(data) {
+    if (typeof data.history_turns !== 'number') return;
+    memoryBadge.textContent = `Memory: ${data.history_turns} turn${data.history_turns === 1 ? '' : 's'}`;
+    memoryBadge.classList.remove('hidden');
+  }
+
+  async function readError(res) {
+    try {
+      const body = await res.json();
+      return typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail || body);
+    } catch {
+      return `HTTP ${res.status}`;
+    }
+  }
+
+  function newConversation() {
+    if (busy) return;
+    if (conversationId) fetch(`/conversations/${conversationId}`, {method: 'DELETE'}).catch(() => {});
+    conversationId = null;
+    thread.replaceChildren();
+    memoryBadge.classList.add('hidden');
+    emptyState.hidden = false;
+    input.focus();
+  }
+
+  async function ask() {
+    if (busy) return;
+    const question = input.value.trim();
+    if (!question) return;
+    input.value = '';
+    emptyState.hidden = true;
+
+    const seconds = el('span', 'timer', '0s');
+    const status = el('div', 'status');
+    status.append(el('span', 'spinner'), document.createTextNode('Agent working — exploring the schema and running SQL · '), seconds);
+    const agent = el('div', 'msg agent');
+    agent.append(status);
+    const turn = el('section', 'turn');
+    turn.append(el('div', 'msg user', question), agent);
+    thread.append(turn);
+    window.scrollTo({top: document.documentElement.scrollHeight, behavior: 'smooth'});
+
+    const started = Date.now();
+    const timer = setInterval(() => {
+      seconds.textContent = `${Math.round((Date.now() - started) / 1000)}s`;
+    }, 1000);
+
+    setBusy(true);
+    try {
+      const body = conversationId ? {question, conversation_id: conversationId} : {question};
+      const res = await fetch('/analyze', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(await readError(res));
+      const data = await res.json();
+      conversationId = data.conversation_id || conversationId;
+      await renderResult(turn, agent, data);
+      updateMemoryBadge(data);
+    } catch (err) {
+      status.replaceWith(el('div', 'error', `Request failed: ${err.message}`));
+    } finally {
+      clearInterval(timer);
+      setBusy(false);
+    }
+  }
+
+  async function renderResult(turn, agent, data) {
+    agent.querySelector('.status').replaceWith(el('div', 'answer', data.answer || '(no answer)'));
+
+    if (data.chart_error) agent.append(el('div', 'warn', `Chart unavailable: ${data.chart_error}`));
+
+    if (data.chart && data.rows && data.rows.length) {
+      const chart = el('div', 'chart');
+      chart.id = `chart-${++chartSeq}`;
+      agent.append(chart);
+      try {
+        await vegaEmbed(`#${chart.id}`, toVegaLite(data.chart, data.columns, data.rows), {actions: false});
+      } catch (err) {
+        chart.append(el('div', 'warn', `Chart rendering failed: ${err}`));
+      }
+    }
+
+    agent.append(buildTrace(data));
+    // only now is the card at its full height, so scrolling lands on the whole turn
+    turn.scrollIntoView({behavior: 'smooth', block: 'start'});
+  }
+
+  function buildTrace(data) {
+    const tools = data.tools_used || [];
+    const details = el('details', 'trace');
+    details.append(el('summary', '',
+      `Trace · ${data.iterations} iteration${data.iterations === 1 ? '' : 's'} · ` +
+      (tools.length ? `tool calls: ${tools.join(' \u2192 ')}` : 'no tool calls')));
+
+    const body = el('div', 'trace-body');
+    body.append(el('h4', '', 'SQL'), el('pre', '', data.sql || '(no SQL was run)'));
+
+    if (data.rows && data.rows.length) {
+      const table = el('table');
+      const headRow = el('tr');
+      (data.columns || []).forEach(column => headRow.append(el('th', '', pretty(column))));
+      const thead = el('thead');
+      thead.append(headRow);
+      const tbody = el('tbody');
+      data.rows.forEach(row => {
+        const tr = el('tr');
+        row.forEach(value => tr.append(el('td', '', formatCell(value))));
+        tbody.append(tr);
+      });
+      table.append(thead, tbody);
+      const scroll = el('div', 'table-scroll');
+      scroll.append(table);
+      body.append(el('h4', '', `Rows returned (${data.rows.length})`), scroll);
+    }
+
+    details.append(body);
+    return details;
+  }
+
+  function pretty(name) {
+    return String(name).replace(/_/g, ' ');
+  }
+
+  function formatCell(value) {
+    if (typeof value === 'number') return value.toLocaleString('en-US', {maximumFractionDigits: 2});
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) return value.slice(0, 10);
+    return String(value);
+  }
+
+  // ---- charting: API rows are arrays; Vega-Lite wants objects keyed by column name ----
+  const CHART_STYLE = {
+    view: {stroke: 'transparent'},
+    axis: {gridColor: '#eceef4', labelColor: '#4b5563', titleColor: '#374151', domainColor: '#d1d5db', tickColor: '#d1d5db'},
+    legend: {labelColor: '#374151', titleColor: '#374151'},
+    bar: {color: '#4f46e5'},
+    line: {color: '#4f46e5', strokeWidth: 3},
+    point: {color: '#4f46e5'},
+    arc: {stroke: '#ffffff', strokeWidth: 1},
+  };
+  // Vega-Lite turns category labels on the x axis vertical by default; horizontal reads better,
+  // long labels are truncated with an ellipsis, crowded ones are thinned out
+  const HORIZONTAL_LABELS = {labelAngle: 0, labelOverlap: true, labelLimit: 120};
+
+  function toVegaLite(chart, columns, rows) {
+    const values = rows.map(row => Object.fromEntries(columns.map((column, i) => [column, row[i]])));
+    const base = {
+      $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+      width: 'container',
+      height: 320,
+      config: CHART_STYLE,
+      data: {values},
+    };
+
+    if (chart.type === 'pie') {
+      return {
+        ...base,
+        mark: {type: 'arc'},
+        encoding: {
+          theta: {field: chart.y_key, type: 'quantitative'},
+          color: {field: chart.x_key, type: 'nominal', legend: {title: pretty(chart.x_key)}},
+          tooltip: true,
+        },
+      };
+    }
+
+    const x = {field: chart.x_key, type: 'nominal', title: pretty(chart.x_key)};
+    const y = {field: chart.y_key, type: 'quantitative', title: pretty(chart.y_key)};
+
+    if (chart.type === 'line') {
+      // a column of ISO dates -> a real time axis; otherwise treat values as labels
+      const dateColumn = columns.indexOf(chart.x_key);
+      const looksLikeDate = dateColumn >= 0 && rows.length > 0 && /^\d{4}-\d{2}-\d{2}/.test(String(rows[0][dateColumn]));
+      if (looksLikeDate) Object.assign(x, {type: 'temporal', timeUnit: 'yearmonth'});
+      else x.axis = HORIZONTAL_LABELS;
+      return {...base, mark: {type: 'line', point: true}, encoding: {x, y, tooltip: true}};
+    }
+
+    // bar: sort by value so "highest first" reads left to right
+    x.sort = '-y';
+    x.axis = HORIZONTAL_LABELS;
+    return {...base, mark: {type: 'bar'}, encoding: {x, y, tooltip: true}};
+  }
+</script>
+</body>
+</html>

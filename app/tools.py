@@ -1,4 +1,4 @@
-from app.db import list_tables, get_schema,run_query
+from app.db import list_tables, get_schema, run_query
 
 TOOLS = [
     {
@@ -22,8 +22,8 @@ TOOLS = [
                 "required": ["table_name"]
             }
         }
-    }
-    ,{
+    },
+    {
         "type": "function",
         "function": {
             "name": "run_query",
@@ -38,6 +38,7 @@ TOOLS = [
         }
     }
 ]
+
 
 def execute_tool(name: str, arguments: dict) -> str:
     """Execute a tool the model requested. Always returns a string:
